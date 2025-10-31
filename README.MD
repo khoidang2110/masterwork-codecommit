@@ -1,58 +1,91 @@
-## Tạo s3 bucket
-### Bước 1:
-- Bật Static website hosting (trong console S3 → Properties → Static website hosting):
+# Triển khai web tĩnh GitHub → CodeCommit → CodePipeline → S3
 
-- Hosting type: “Host a static website”
+## 0) Yêu cầu
+- **Region** thống nhất: `ap-southeast-2` (Sydney)
+- Repo GitHub sẵn sàng
+- S3 bucket tên **unique** (vd: `khoi-web`)
 
-- Index document: index.html
-### Bước 2:
-Permissions → Bucket policy:
-```bash
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Sid": "PublicReadGetObject",
-                "Effect": "Allow",
-                "Principal": "*",
-                "Action": "s3:GetObject",
-                "Resource": "arn:aws:s3:::khoi-web/*"
-            }
-        ]
-    }
+---
+
+## 1) Tạo S3 bucket (Static Website Hosting)
+
+### Bước 1 — Bật website hosting
+Vào **S3 → Bucket `khoi-web` → Properties → Static website hosting**
+- Hosting type: `Host a static website`
+- Index document: `index.html`
+- (tuỳ) Error document: `404.html`
+
+### Bước 2 — Cho phép đọc public
+Vào **S3 → Bucket `khoi-web` → Permissions**
+- *Block public access*: bỏ tick “Block all public access”
+- *Bucket policy*:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Sid": "PublicReadGetObject",
+    "Effect": "Allow",
+    "Principal": "*",
+    "Action": "s3:GetObject",
+    "Resource": "arn:aws:s3:::khoi-web/*"
+  }]
+}
 ```
 
-## Tạo codecommit
-- name: masterwork
-- Lấy HTTPS clone URL:
- https://git-codecommit.ap-southeast-2.amazonaws.com/v1/repos/masterwork
-## Tạo codepipeline
-Source: 
-- AWS CodeCommit
-- Repository name: masterwork
-- Branch name: main
-- Output artifact format: CodePipeline default
-  
-- Deploy provider: Amazon S3
+> Truy cập qua website endpoint:  
+> `http://khoi-web.s3-website-ap-southeast-2.amazonaws.com`
 
-    - Bucket: khoi-web
+---
 
-    - “Extract file before deploy”: Enabled (giải nén artifact)
+## 2) Tạo CodeCommit
+- **Repository name:** `masterwork`
+- **HTTPS clone URL:**  
+  `https://git-codecommit.ap-southeast-2.amazonaws.com/v1/repos/masterwork`
 
-- skip build và test
+---
 
-## Cấu hình tự động đồng bộ từ GitHub sang CodeCommit mỗi khi push
-###   Bước 1: Tạo IAM User cho GitHub Actions
-    ```bash
-    khoi-github-actions-codecommit
+## 3) Tạo CodePipeline (Source → Deploy)
 
-    có policy/AWSCodeCommitPowerUser
+### Source
+- **Source provider:** `AWS CodeCommit`
+- **Repository:** `masterwork`
+- **Branch name:** `main` 
+- **Output artifact format:** `CodePipeline default`
+- ✅ *Start the pipeline on source code changes:* Enabled
 
-    Lưu lại AccessKeyId và SecretAccessKey.
-    ```
-###   Bước 2: Thêm Secrets vào GitHub Repository
+### Build
+- Skip (không cần cho web tĩnh)
+
+### Deploy
+- **Deploy provider:** `Amazon S3`
+- **Bucket:** `khoi-web`
+- **Extract file before deploy:** Enabled
+
+> Sau khi tạo, bấm **Release change** để chạy thử.
+
+---
+
+## 4) Đồng bộ GitHub → CodeCommit (GitHub Actions)
+
+### Bước 1 — Tạo IAM User
 ```bash
-        AWS_ACCESS_KEY_ID: Access Key từ bước 1
-        AWS_SECRET_ACCESS_KEY: Secret Key từ bước 1
+Tên user: khoi-github-actions-codecommit
+Policy: AWSCodeCommitPowerUser
 ```
-###   Bước 3: Tạo GitHub Actions Workflow
+Lưu lại `AccessKeyId` và `SecretAccessKey`.
+
+### Bước 2 — Thêm Secrets vào GitHub Repository
+```bash
+AWS_ACCESS_KEY_ID: <AccessKeyId>
+AWS_SECRET_ACCESS_KEY: <SecretAccessKey>
+```
+
+### Bước 3 — Tạo workflow `.github/workflows/mirror-to-codecommit.yml`
+
+### Kick pipeline
+Push commit mới lên GitHub → workflow sẽ mirror sang CodeCommit → CodePipeline chạy tự động.  
+Hoặc bấm **Release change** trong CodePipeline.
+
+### URL website:
+`http://khoi-web.s3-website-ap-southeast-2.amazonaws.com`
+
