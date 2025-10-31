@@ -27,15 +27,18 @@ Permissions → Bucket policy:
 - Lấy HTTPS clone URL:
  https://git-codecommit.ap-southeast-2.amazonaws.com/v1/repos/masterwork
 ## Tạo codepipeline
-
-
-
+Source: 
+- AWS CodeCommit
+- Repository name: masterwork
+- Branch name: main
+- Output artifact format: CodePipeline default
+  
 - Deploy provider: Amazon S3
 
     - Bucket: khoi-web
 
     - “Extract file before deploy”: Enabled (giải nén artifact)
-    
+
 - skip build và test
 
 ## Cấu hình tự động đồng bộ từ GitHub sang CodeCommit mỗi khi push
