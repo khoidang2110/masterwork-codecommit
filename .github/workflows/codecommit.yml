@@ -2,7 +2,7 @@ name: Mirror to CodeCommit
 
 on:
   push:
-    branches: [ "master" ]  # đổi theo branch bạn dùng
+    branches: [ "main" ]  # đổi theo branch bạn dùng
 
 jobs:
   mirror:
@@ -27,7 +27,7 @@ jobs:
 
       - name: Set CodeCommit remote URL (HTTPS)
         run: |
-          CODECOMMIT_URL="https://git-codecommit.ap-southeast-2.amazonaws.com/v1/repos/masterwork"
+          CODECOMMIT_URL="https://git-codecommit.ap-southeast-2.amazonaws.com/v1/repos/mainwork"
           git remote add codecommit "$CODECOMMIT_URL" || git remote set-url codecommit "$CODECOMMIT_URL"
           git remote -v
 
@@ -39,4 +39,4 @@ jobs:
       - name: Push to CodeCommit (mirror)
         run: |
           # Đẩy tất cả refs (branches, tags) – hoặc chỉ main: git push codecommit main:main
-          git push --force  codecommit master:master
+          git push --force  codecommit main:main
