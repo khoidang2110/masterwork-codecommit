@@ -82,6 +82,51 @@ AWS_SECRET_ACCESS_KEY: <SecretAccessKey>
 
 ### Bước 3 — Tạo workflow `.github/workflows/mirror-to-codecommit.yml`
 
+```bash
+name: Mirror to CodeCommit
+
+on:
+  push:
+    branches: [ "main" ]  # đổi theo branch bạn dùng
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitHub
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # mirror cần full history/tags
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'ap-southeast-2' }}
+
+      - name: Configure CodeCommit credential helper
+        run: |
+          git config --global credential.helper '!aws codecommit credential-helper $@'
+          git config --global credential.UseHttpPath true
+
+      - name: Set CodeCommit remote URL (HTTPS)
+        run: |
+          CODECOMMIT_URL="https://git-codecommit.ap-southeast-2.amazonaws.com/v1/repos/masterwork"
+          git remote add codecommit "$CODECOMMIT_URL" || git remote set-url codecommit "$CODECOMMIT_URL"
+          git remote -v
+
+      - name: Set Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Push to CodeCommit (mirror)
+        run: |
+          # Đẩy tất cả refs (branches, tags) – hoặc chỉ main: git push codecommit main:main
+          git push --force  codecommit main:main
+```
+
 ### Kick pipeline
 Push commit mới lên GitHub → workflow sẽ mirror sang CodeCommit → CodePipeline chạy tự động.  
 Hoặc bấm **Release change** trong CodePipeline.
